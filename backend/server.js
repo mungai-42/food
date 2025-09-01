@@ -30,7 +30,7 @@ app.use(limiter);
 // CORS - Updated for Vercel deployment
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://digifarmfrontend.vercel.app', 'https://digifarmfrontend.vercel.app'] // Update with your actual frontend URL
+    ? ['https://digi-farm-frontend.vercel.app', 'https://digifarmfrontend.vercel.app'] // Your actual frontend URLs
     : ['http://localhost:3000'],
   credentials: true
 }));
