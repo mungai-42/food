@@ -6,7 +6,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // Force set environment variables for Vercel deployment
-process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0';
+process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0&directConnection=true';
 process.env.NODE_ENV = 'production';
 process.env.JWT_SECRET = 'digifarm_secure_jwt_secret_key_2024_production';
 process.env.JWT_EXPIRE = '24h';
@@ -146,8 +146,8 @@ if (!process.env.PORT) {
   process.env.PORT = 5000;
 }
 
-// Database connection function with retry mechanism
-const connectDB = async (retries = 3) => {
+// Database connection function optimized for serverless
+const connectDB = async (retries = 2) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       if (!process.env.MONGODB_URI) {
@@ -161,12 +161,14 @@ const connectDB = async (retries = 3) => {
       await mongoose.connect(process.env.MONGODB_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true,
-        serverSelectionTimeoutMS: 15000,
-        socketTimeoutMS: 45000,
-        maxPoolSize: 10,
-        minPoolSize: 1,
+        serverSelectionTimeoutMS: 5000, // Reduced for serverless
+        socketTimeoutMS: 10000, // Reduced for serverless
+        maxPoolSize: 1, // Reduced for serverless
+        minPoolSize: 0, // Reduced for serverless
         retryWrites: true,
-        w: 'majority'
+        w: 'majority',
+        bufferCommands: false, // Disable buffering for serverless
+        bufferMaxEntries: 0 // Disable buffering for serverless
       });
       
       console.log('✅ Connected to MongoDB successfully');
@@ -185,8 +187,8 @@ const connectDB = async (retries = 3) => {
       }
       
       // Wait before retrying
-      console.log(`⏳ Waiting 2 seconds before retry...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log(`⏳ Waiting 1 second before retry...`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   }
   return false;
@@ -194,6 +196,19 @@ const connectDB = async (retries = 3) => {
 
 // Connect to database
 connectDB();
+
+// Add connection event listeners
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB connection established');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('⚠️ MongoDB connection disconnected');
+});
 
 // For Vercel serverless functions, export the app
 module.exports = app;

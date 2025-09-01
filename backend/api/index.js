@@ -1,5 +1,5 @@
 // Force set environment variables for Vercel deployment
-process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0';
+process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0&directConnection=true';
 process.env.NODE_ENV = 'production';
 process.env.JWT_SECRET = 'digifarm_secure_jwt_secret_key_2024_production';
 process.env.JWT_EXPIRE = '24h';
