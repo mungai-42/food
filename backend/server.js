@@ -30,7 +30,7 @@ app.use(limiter);
 // CORS - Updated for Vercel deployment
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://digi-farm-frontend.vercel.app', 'https://digifarmfrontend.vercel.app'] // Your actual frontend URLs
+    ? ['https://digi-farm-frontend.vercel.app', 'https://digifarmfrontend.vercel.app', 'https://digifarm-nine.vercel.app'] // Your actual frontend URLs
     : ['http://localhost:3000'],
   credentials: true
 }));
@@ -52,13 +52,24 @@ app.use('/api/inquiries', inquiryRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
-    message: 'Digi-Farm API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({ 
+      status: 'OK', 
+      message: 'Digi-Farm API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: dbStatus,
+      mongodb_uri: process.env.MONGODB_URI ? 'configured' : 'missing'
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'ERROR',
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
 });
 
 // Root endpoint
@@ -112,6 +123,8 @@ const connectDB = async () => {
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
     });
     
     console.log('✅ Connected to MongoDB');
