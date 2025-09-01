@@ -5,26 +5,17 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// Load environment variables and Vercel configuration
-require('dotenv').config({ path: './config.env' });
+// Force set environment variables for Vercel deployment
+process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0';
+process.env.NODE_ENV = 'production';
+process.env.JWT_SECRET = 'digifarm_secure_jwt_secret_key_2024_production';
+process.env.JWT_EXPIRE = '24h';
+process.env.PORT = 5000;
 
-// Set default environment variables for Vercel deployment
-if (!process.env.MONGODB_URI) {
-  process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0';
-  console.log('🔧 Set default MONGODB_URI');
-}
-if (!process.env.NODE_ENV) {
-  process.env.NODE_ENV = 'production';
-  console.log('🔧 Set default NODE_ENV: production');
-}
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = 'digifarm_secure_jwt_secret_key_2024_production';
-  console.log('🔧 Set default JWT_SECRET');
-}
-if (!process.env.JWT_EXPIRE) {
-  process.env.JWT_EXPIRE = '24h';
-  console.log('🔧 Set default JWT_EXPIRE: 24h');
-}
+console.log('🔧 Environment variables set for Vercel deployment');
+console.log('🔧 MONGODB_URI:', process.env.MONGODB_URI ? 'Set' : 'Not set');
+console.log('🔧 NODE_ENV:', process.env.NODE_ENV);
+console.log('🔧 JWT_SECRET:', process.env.JWT_SECRET ? 'Set' : 'Not set');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -73,13 +64,28 @@ app.use('/api/admin', adminRoutes);
 app.get('/api/health', async (req, res) => {
   try {
     const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    const dbReadyState = mongoose.connection.readyState;
+    const readyStateText = {
+      0: 'disconnected',
+      1: 'connected',
+      2: 'connecting',
+      3: 'disconnecting'
+    };
+    
     res.json({ 
       status: 'OK', 
       message: 'Digi-Farm API is running',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
       database: dbStatus,
-      mongodb_uri: process.env.MONGODB_URI ? 'configured' : 'missing'
+      database_ready_state: dbReadyState,
+      database_ready_state_text: readyStateText[dbReadyState],
+      mongodb_uri: process.env.MONGODB_URI ? 'configured' : 'missing',
+      env_vars: {
+        NODE_ENV: process.env.NODE_ENV,
+        MONGODB_URI: process.env.MONGODB_URI ? 'present' : 'missing',
+        JWT_SECRET: process.env.JWT_SECRET ? 'present' : 'missing'
+      }
     });
   } catch (error) {
     res.status(500).json({
