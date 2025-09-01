@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }) => {
           const response = await api.get('/api/auth/me');
           dispatch({ type: 'USER_LOADED', payload: response.data.user });
         } catch (error) {
+          console.error('Error loading user:', error);
           dispatch({ type: 'LOGIN_FAIL' });
         }
       } else {
@@ -84,21 +85,35 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/api/auth/login', { email, password });
       
       const { token, user } = response.data;
+      console.log('Login response:', { token, user }); // Debug log
+      
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       dispatch({ type: 'LOGIN_SUCCESS', payload: { token, user } });
       toast.success('Login successful!');
       
-      // Redirect based on role
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else if (user.role === 'farmer') {
-        navigate('/farmer');
-      }
+      // Add delay to ensure state is updated
+      setTimeout(() => {
+        // Redirect based on role
+        if (user.role === 'admin') {
+          console.log('Redirecting to admin dashboard');
+          navigate('/admin');
+        } else if (user.role === 'farmer') {
+          console.log('Redirecting to farmer dashboard');
+          navigate('/farmer');
+        } else {
+          console.log('Unknown role, redirecting to home');
+          navigate('/');
+        }
+      }, 100);
+      
     } catch (error) {
+      console.error('Login error:', error);
       dispatch({ type: 'LOGIN_FAIL' });
       toast.error(error.response?.data?.message || 'Login failed');
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
@@ -109,17 +124,27 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/api/auth/register', userData);
       
       const { token, user } = response.data;
+      console.log('Register response:', { token, user }); // Debug log
+      
       localStorage.setItem('token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
       dispatch({ type: 'LOGIN_SUCCESS', payload: { token, user } });
       toast.success('Registration successful! Please wait for admin approval.');
       
-      // Redirect to farmer dashboard
-      navigate('/farmer');
+      // Add delay to ensure state is updated
+      setTimeout(() => {
+        // Redirect to farmer dashboard
+        console.log('Redirecting to farmer dashboard after registration');
+        navigate('/farmer');
+      }, 100);
+      
     } catch (error) {
+      console.error('Registration error:', error);
       dispatch({ type: 'LOGIN_FAIL' });
       toast.error(error.response?.data?.message || 'Registration failed');
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   };
 
@@ -149,6 +174,7 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user has specific role
   const hasRole = (role) => {
+    console.log('Checking role:', role, 'User:', state.user); // Debug log
     return state.user?.role === role;
   };
 
