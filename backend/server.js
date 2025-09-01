@@ -6,7 +6,25 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // Load environment variables and Vercel configuration
-require('./vercel-env');
+require('dotenv').config({ path: './config.env' });
+
+// Set default environment variables for Vercel deployment
+if (!process.env.MONGODB_URI) {
+  process.env.MONGODB_URI = 'mongodb+srv://mungaisamuel624_db_user:XblLkU7hu9q6Xa9x@cluster0.kclxcyt.mongodb.net/digifarm?retryWrites=true&w=majority&appName=Cluster0';
+  console.log('🔧 Set default MONGODB_URI');
+}
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'production';
+  console.log('🔧 Set default NODE_ENV: production');
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'digifarm_secure_jwt_secret_key_2024_production';
+  console.log('🔧 Set default JWT_SECRET');
+}
+if (!process.env.JWT_EXPIRE) {
+  process.env.JWT_EXPIRE = '24h';
+  console.log('🔧 Set default JWT_EXPIRE: 24h');
+}
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -122,37 +140,50 @@ if (!process.env.PORT) {
   process.env.PORT = 5000;
 }
 
-// Database connection function
-const connectDB = async () => {
-  try {
-    if (!process.env.MONGODB_URI) {
-      console.error('❌ MONGODB_URI environment variable is not set');
-      return false;
+// Database connection function with retry mechanism
+const connectDB = async (retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      if (!process.env.MONGODB_URI) {
+        console.error('❌ MONGODB_URI environment variable is not set');
+        return false;
+      }
+      
+      console.log(`🔍 Attempting to connect to MongoDB (attempt ${attempt}/${retries})...`);
+      console.log('🔍 Connection string:', process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
+      
+      await mongoose.connect(process.env.MONGODB_URI, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
+        serverSelectionTimeoutMS: 15000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+        minPoolSize: 1,
+        retryWrites: true,
+        w: 'majority'
+      });
+      
+      console.log('✅ Connected to MongoDB successfully');
+      return true;
+    } catch (err) {
+      console.error(`❌ MongoDB connection error (attempt ${attempt}/${retries}):`, err.message);
+      console.error('❌ Error details:', {
+        name: err.name,
+        code: err.code,
+        message: err.message
+      });
+      
+      if (attempt === retries) {
+        console.error('❌ All connection attempts failed');
+        return false;
+      }
+      
+      // Wait before retrying
+      console.log(`⏳ Waiting 2 seconds before retry...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
-    
-    console.log('🔍 Attempting to connect to MongoDB...');
-    console.log('🔍 Connection string:', process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
-    
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      minPoolSize: 1,
-    });
-    
-    console.log('✅ Connected to MongoDB successfully');
-    return true;
-  } catch (err) {
-    console.error('❌ MongoDB connection error:', err.message);
-    console.error('❌ Error details:', {
-      name: err.name,
-      code: err.code,
-      message: err.message
-    });
-    return false;
   }
+  return false;
 };
 
 // Connect to database
