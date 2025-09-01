@@ -5,8 +5,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// Load environment variables
-require('dotenv').config();
+// Load environment variables and Vercel configuration
+require('./vercel-env');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -110,27 +110,47 @@ app.use('*', (req, res) => {
 // Debug environment variables
 console.log('🔍 Environment variables loaded:');
 console.log('MONGODB_URI:', process.env.MONGODB_URI ? '✅ Loaded' : '❌ Not loaded');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('PORT:', process.env.PORT);
+console.log('NODE_ENV:', process.env.NODE_ENV || 'development');
+console.log('PORT:', process.env.PORT || 5000);
+console.log('JWT_SECRET:', process.env.JWT_SECRET ? '✅ Loaded' : '❌ Not loaded');
+
+// Set default environment variables if not present
+if (!process.env.NODE_ENV) {
+  process.env.NODE_ENV = 'development';
+}
+if (!process.env.PORT) {
+  process.env.PORT = 5000;
+}
 
 // Database connection function
 const connectDB = async () => {
   try {
     if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI environment variable is not set');
+      console.error('❌ MONGODB_URI environment variable is not set');
+      return false;
     }
+    
+    console.log('🔍 Attempting to connect to MongoDB...');
+    console.log('🔍 Connection string:', process.env.MONGODB_URI.replace(/\/\/[^:]+:[^@]+@/, '//***:***@'));
     
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
     });
     
-    console.log('✅ Connected to MongoDB');
+    console.log('✅ Connected to MongoDB successfully');
     return true;
   } catch (err) {
-    console.error('❌ MongoDB connection error:', err);
+    console.error('❌ MongoDB connection error:', err.message);
+    console.error('❌ Error details:', {
+      name: err.name,
+      code: err.code,
+      message: err.message
+    });
     return false;
   }
 };

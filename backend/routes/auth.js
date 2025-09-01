@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const { protect } = require('../middleware/auth');
 
@@ -23,6 +24,15 @@ router.post('/register', [
   body('phone').optional().trim(),
   body('address').optional().trim()
 ], async (req, res) => {
+  // Check database connection
+  if (mongoose.connection.readyState !== 1) {
+    console.error('❌ Database not connected. ReadyState:', mongoose.connection.readyState);
+    return res.status(500).json({
+      success: false,
+      message: 'Database connection error. Please try again later.',
+      error: 'Database disconnected'
+    });
+  }
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -85,6 +95,15 @@ router.post('/login', [
   body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email'),
   body('password').exists().withMessage('Password is required')
 ], async (req, res) => {
+  // Check database connection
+  if (mongoose.connection.readyState !== 1) {
+    console.error('❌ Database not connected. ReadyState:', mongoose.connection.readyState);
+    return res.status(500).json({
+      success: false,
+      message: 'Database connection error. Please try again later.',
+      error: 'Database disconnected'
+    });
+  }
   try {
     // Check for validation errors
     const errors = validationResult(req);
